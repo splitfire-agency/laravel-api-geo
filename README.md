@@ -28,11 +28,8 @@ La clé de service est une clé `sfg_live_…` de la passerelle portant les port
 | `API_GEO_CONNECT_TIMEOUT` | `2` | délai de connexion, en secondes |
 | `API_GEO_RETRY_TIMES` | `1` | nouvelles tentatives sur une indisponibilité |
 | `API_GEO_RETRY_SLEEP_MS` | `1000` | attente avant une nouvelle tentative |
-| `API_GEO_PROXY_ENABLED` | `false` | active la route d'autocomplétion |
-| `API_GEO_PROXY_PREFIX` | `api-geo` | préfixe de cette route |
-| `API_GEO_PROXY_TIMEOUT` | `3` | délai de réponse de cette route, en secondes |
 
-`php artisan vendor:publish --tag=api-geo-config` publie `config/api-geo.php`, notamment pour changer les middlewares de la route d'autocomplétion. Un fichier partiel est complété par les valeurs par défaut. Une valeur invalide (délai vide ou nul, URL vide) lève une `InvalidArgumentException` à la première résolution du client.
+`php artisan vendor:publish --tag=api-geo-config` publie `config/api-geo.php`. Un fichier partiel est complété par les valeurs par défaut. Une valeur invalide (délai vide ou nul, URL vide) lève une `InvalidArgumentException` à la première résolution du client.
 
 ## Utilisation
 
@@ -97,15 +94,6 @@ Le package ne met rien en cache. Chaque appel passe par la passerelle et compte 
 $key = 'geo:search:'.sha1(mb_strtolower(trim($text)));
 $results = Cache::remember($key, now()->addWeek(), fn () => ApiGeo::search($text));
 ```
-
-## Autocomplétion
-
-Avec `API_GEO_PROXY_ENABLED=true`, la route `GET /api-geo/search` (nom `api-geo.search`) relaie les paramètres de `/search` vers l'API sans exposer la clé au navigateur. Elle répond avec le contrat d'api-geo, attribution comprise.
-
-- Une requête invalide reçoit le 400 du contrat sans appel à l'API. Une valeur vide vaut absence, pour qu'un champ de filtre vide ne bloque pas la saisie. Un paramètre répété garde sa dernière valeur, comme le fait PHP.
-- Le relais n'attend pas plus de `API_GEO_PROXY_TIMEOUT` secondes et ne retente pas, pour ne pas immobiliser les workers pendant une panne.
-- Un quota atteint donne un 503 `service_unavailable` avec `Retry-After`, sans `report()`. Toute autre erreur donne le même 503, sans `Retry-After`, et passe par `report()`.
-- Les middlewares par défaut se limitent à `throttle:60,1`. La route consomme le quota de l'application : à protéger selon le contexte (authentification, limite plus stricte).
 
 ## Tests dans une application
 

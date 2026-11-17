@@ -9,6 +9,7 @@ use Splitfire\ApiGeo\Internal\Payload;
 final readonly class Feature implements JsonSerializable
 {
     public function __construct(
+        /** Changes with each BAN release: do not store it. */
         public string $id,
         public FeatureType $type,
         public Coordinates $coordinates,
@@ -35,6 +36,7 @@ final readonly class Feature implements JsonSerializable
     {
         $properties = Payload::object($data, 'properties');
         $type = FeatureType::tryFrom(Payload::string($properties, 'type'));
+        // The contract may add types; clients must skip the ones they do not know.
         if ($type === null) {
             return null;
         }
@@ -47,6 +49,7 @@ final readonly class Feature implements JsonSerializable
         return new self(
             id: Payload::string($properties, 'id'),
             type: $type,
+            // GeoJSON order: [lon, lat].
             coordinates: new Coordinates(lat: Payload::number($point, 1), lon: Payload::number($point, 0)),
             label: Payload::string($properties, 'label'),
             name: Payload::string($properties, 'name'),

@@ -23,6 +23,7 @@ final class Rules
 
     public static function text(string $raw): string
     {
+        // geo checks control characters before trimming, so a leading newline is refused.
         if (! mb_check_encoding($raw, 'UTF-8') || preg_match('/\p{Cc}/u', $raw) === 1) {
             throw InvalidQuery::invalid('q');
         }
@@ -62,24 +63,13 @@ final class Rules
         return new Coordinates(self::coordinate('lat', $point->lat, $decimals), self::coordinate('lon', $point->lon, $decimals));
     }
 
-    public static function coordinate(string $parameter, float|string $value, int $decimals): float
-    {
-        $raw = is_string($value) ? self::parseDecimal($parameter, $value) : self::formatFinite($parameter, $value);
-        $dot = strpos($raw, '.');
-        $truncated = (float) ($dot === false ? $raw : substr($raw, 0, $dot + 1 + $decimals));
-        if (abs($truncated) > self::BOUNDS[$parameter]) {
-            throw InvalidQuery::invalid($parameter);
-        }
-
-        return $truncated === 0.0 ? 0.0 : $truncated;
-    }
-
     public static function decimal(float $value): string
     {
         if ($value === 0.0) {
             return '0';
         }
 
+        // Shortest form that reads back as the same float; %H ignores the locale.
         for ($digits = 1; $digits <= 17; $digits++) {
             $repr = sprintf('%.'.$digits.'H', $value);
             if ((float) $repr === $value) {
@@ -93,42 +83,21 @@ final class Rules
         return str_contains($repr, '.') ? rtrim(rtrim($repr, '0'), '.') : $repr;
     }
 
-    public static function integer(string $parameter, string $raw): int
-    {
-        if (preg_match('/^[+-]?[0-9]+$/D', $raw) !== 1) {
-            throw InvalidQuery::invalid($parameter);
-        }
-
-        return (int) $raw;
-    }
-
-    public static function boolean(string $parameter, string $raw): bool
-    {
-        return match ($raw) {
-            'true', '1' => true,
-            'false', '0' => false,
-            default => throw InvalidQuery::invalid($parameter),
-        };
-    }
-
-    private static function parseDecimal(string $parameter, string $raw): string
-    {
-        if (preg_match('/^[+-]?[0-9]*\.?[0-9]*$/D', $raw) === 1 && preg_match('/[0-9]/', $raw) === 1) {
-            return $raw;
-        }
-        if (preg_match('/^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)[eE][+-]?[0-9]+$/D', $raw) !== 1) {
-            throw InvalidQuery::invalid($parameter);
-        }
-
-        return self::formatFinite($parameter, (float) $raw);
-    }
-
-    private static function formatFinite(string $parameter, float $value): string
+    private static function coordinate(string $parameter, float $value, int $decimals): float
     {
         if (! is_finite($value)) {
             throw InvalidQuery::invalid($parameter);
         }
 
-        return self::decimal($value);
+        // geo truncates the shortest decimal form of the value, then checks the bounds.
+        $raw = self::decimal($value);
+        $dot = strpos($raw, '.');
+        $truncated = (float) ($dot === false ? $raw : substr($raw, 0, $dot + 1 + $decimals));
+        if (abs($truncated) > self::BOUNDS[$parameter]) {
+            throw InvalidQuery::invalid($parameter);
+        }
+
+        // Turns -0.0 into 0.0, as geo does.
+        return $truncated === 0.0 ? 0.0 : $truncated;
     }
 }

@@ -12,12 +12,4 @@ return [
     'retry_times' => env('API_GEO_RETRY_TIMES', 1),
 
     'retry_sleep_ms' => env('API_GEO_RETRY_SLEEP_MS', 1000),
-
-    'proxy_enabled' => env('API_GEO_PROXY_ENABLED', false),
-
-    'proxy_prefix' => env('API_GEO_PROXY_PREFIX', 'api-geo'),
-
-    'proxy_timeout' => env('API_GEO_PROXY_TIMEOUT', 3),
-
-    'proxy_middleware' => ['throttle:60,1'],
 ];

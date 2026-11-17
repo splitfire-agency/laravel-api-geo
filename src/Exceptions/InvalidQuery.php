@@ -14,11 +14,6 @@ final class InvalidQuery extends InvalidArgumentException implements ApiGeoExcep
         parent::__construct($message);
     }
 
-    public static function missing(string $parameter): self
-    {
-        return new self('missing_parameter', $parameter, "The parameter {$parameter} is required.");
-    }
-
     public static function invalid(string $parameter): self
     {
         return new self('invalid_parameter', $parameter, "The parameter {$parameter} has an invalid value.");

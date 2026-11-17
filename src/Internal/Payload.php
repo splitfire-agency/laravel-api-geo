@@ -63,6 +63,7 @@ final class Payload
     public static function object(array $data, string $key): array
     {
         $value = $data[$key] ?? null;
+        // json_decode turns {} into [].
         if (! is_array($value) || ($value !== [] && array_is_list($value))) {
             throw self::invalid($key);
         }

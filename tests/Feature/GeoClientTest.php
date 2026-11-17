@@ -240,8 +240,8 @@ final class GeoClientTest extends TestCase
             'unknown code 503' => [503, $unknown, ServiceUnavailable::class],
             'unknown code 418' => [418, $unknown, UnexpectedResponse::class],
             'unknown code 404' => [404, $unknown, UnexpectedResponse::class],
-            'proxy 404 page' => [404, '404 page not found', ServiceUnavailable::class],
-            'proxy 502 page' => [502, '<html>Bad Gateway</html>', ServiceUnavailable::class],
+            'intermediary 404 page' => [404, '404 page not found', ServiceUnavailable::class],
+            'intermediary 502 page' => [502, '<html>Bad Gateway</html>', ServiceUnavailable::class],
         ];
     }
 

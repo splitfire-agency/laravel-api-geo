@@ -14,6 +14,7 @@ final class ServiceUnavailable extends RequestFailed
 
     public function isTransient(): bool
     {
+        // service_disabled means the service is switched off in the gateway, not an outage.
         return $this->errorCode !== 'service_disabled';
     }
 }

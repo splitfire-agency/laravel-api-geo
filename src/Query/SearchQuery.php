@@ -5,7 +5,6 @@ namespace Splitfire\ApiGeo\Query;
 use Illuminate\Support\Arr;
 use Splitfire\ApiGeo\Data\Coordinates;
 use Splitfire\ApiGeo\Data\FeatureType;
-use Splitfire\ApiGeo\Exceptions\InvalidQuery;
 use Splitfire\ApiGeo\Internal\Rules;
 
 final readonly class SearchQuery
@@ -25,60 +24,6 @@ final readonly class SearchQuery
     public static function for(string $text): self
     {
         return new self(Rules::text($text));
-    }
-
-    /**
-     * @param  array<string, mixed>  $parameters
-     */
-    public static function fromParameters(array $parameters): self
-    {
-        $value = static function (string $name) use ($parameters): ?string {
-            $value = $parameters[$name] ?? null;
-            if ($value !== null && ! is_string($value)) {
-                throw InvalidQuery::invalid($name);
-            }
-
-            return $value === '' ? null : $value;
-        };
-
-        $text = $value('q');
-        if ($text === null) {
-            throw InvalidQuery::missing('q');
-        }
-        $query = self::for($text);
-
-        if (($limit = $value('limit')) !== null) {
-            $query = $query->limit(Rules::integer('limit', $limit));
-        }
-        if (($autocomplete = $value('autocomplete')) !== null) {
-            $query = $query->autocomplete(Rules::boolean('autocomplete', $autocomplete));
-        }
-        if (($type = $value('type')) !== null) {
-            $query = $query->type(FeatureType::tryFrom($type) ?? throw InvalidQuery::invalid('type'));
-        }
-        if (($postcode = $value('postcode')) !== null) {
-            $query = $query->postcode($postcode);
-        }
-        if (($citycode = $value('citycode')) !== null) {
-            $query = $query->citycode($citycode);
-        }
-        if (($departmentCode = $value('department_code')) !== null) {
-            $query = $query->departmentCode($departmentCode);
-        }
-        if (($regionCode = $value('region_code')) !== null) {
-            $query = $query->regionCode($regionCode);
-        }
-
-        $lat = ($raw = $value('lat')) === null ? null : Rules::coordinate('lat', $raw, 3);
-        $lon = ($raw = $value('lon')) === null ? null : Rules::coordinate('lon', $raw, 3);
-        if ($lat !== null && $lon === null) {
-            throw InvalidQuery::invalid('lon');
-        }
-        if ($lon !== null && $lat === null) {
-            throw InvalidQuery::invalid('lat');
-        }
-
-        return $lat === null ? $query : $query->with(['near' => new Coordinates($lat, $lon)]);
     }
 
     public function limit(int $limit): self

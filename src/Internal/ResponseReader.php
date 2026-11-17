@@ -52,6 +52,7 @@ final class ResponseReader
             $status === 400 => RequestRejected::class,
             $status === 401, $status === 403 => AccessDenied::class,
             $status === 402, $status === 429 => QuotaExceeded::class,
+            // Traefik answers a bare 404 while the gateway container is down; a contract 404 carries an error body.
             $status >= 500, $status === 404 && $error === null => ServiceUnavailable::class,
             default => UnexpectedResponse::class,
         };
@@ -62,6 +63,7 @@ final class ResponseReader
             $status,
             is_string($error['parameter'] ?? null) ? $error['parameter'] : null,
             $meta,
+            // The monthly cap (402) only sends RateLimit-Reset.
             self::integer($response, 'Retry-After') ?? ($class === QuotaExceeded::class ? $meta->rateLimit?->reset : null),
         );
     }

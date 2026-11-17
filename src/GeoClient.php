@@ -49,6 +49,7 @@ final class GeoClient implements Geocoder
 
     public function withRequestId(?string $requestId): static
     {
+        // The gateway replaces an X-Request-Id that is not 1 to 128 printable ASCII characters.
         if ($requestId !== null && preg_match('/^[!-~]{1,128}$/D', $requestId) !== 1) {
             throw new InvalidArgumentException('A request id is 1 to 128 printable ASCII characters.');
         }
@@ -95,9 +96,11 @@ final class GeoClient implements Geocoder
                 ->withToken((string) $this->key)
                 ->acceptJson()
                 ->withHeaders($this->requestId === null ? [] : ['X-Request-Id' => $this->requestId])
+                // timeout() only takes integers and connectTimeout() is missing in Laravel 8.
                 ->withOptions(['timeout' => $this->timeout, 'connect_timeout' => $this->connectTimeout])
                 ->get($path, $parameters);
         } catch (ConnectionException|RequestException|TransferException $e) {
+            // Depending on the Laravel version, a transfer error surfaces as a Guzzle exception or as a RequestException.
             throw ServiceUnavailable::unreachable($e, $this->requestId);
         }
     }
