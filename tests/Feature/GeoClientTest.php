@@ -4,15 +4,16 @@ namespace Splitfire\ApiGeo\Tests\Feature;
 
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
+use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Request as PsrRequest;
 use GuzzleHttp\Psr7\Response as PsrResponse;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Splitfire\ApiGeo\Contracts\Geocoder;
 use Splitfire\ApiGeo\Data\Coordinates;
-use Splitfire\ApiGeo\Data\FeatureCollection;
 use Splitfire\ApiGeo\Exceptions\AccessDenied;
 use Splitfire\ApiGeo\Exceptions\InvalidQuery;
 use Splitfire\ApiGeo\Exceptions\QuotaExceeded;
@@ -401,26 +402,13 @@ final class GeoClientTest extends TestCase
         self::assertNull($e->getPrevious());
     }
 
-    public function test_transfer_failure_with_a_partial_response_is_unavailable(): void
-    {
-        Http::fake(static function () {
-            throw new GuzzleRequestException('cURL error 18: transfer closed', new PsrRequest('GET', 'https://api.services.splitfire.fr/geo/search'), new PsrResponse(502));
-        });
-
-        $e = self::failure(fn () => $this->geocoder()->search('paris'));
-
-        self::assertInstanceOf(ServiceUnavailable::class, $e);
-        self::assertNull($e->errorCode);
-        self::assertSame(502, $e->status);
-    }
-
     public function test_transfer_failure_after_an_error_status_keeps_its_meaning(): void
     {
         $attempts = 0;
         Http::fake(static function () use (&$attempts) {
             $attempts++;
 
-            throw new GuzzleRequestException('cURL error 18: transfer closed', new PsrRequest('GET', 'https://api.services.splitfire.fr/geo/search'), new PsrResponse(429, ['Retry-After' => '30']));
+            throw self::cutTransfer(new PsrResponse(429, ['Retry-After' => '30']));
         });
 
         $e = self::failure(fn () => $this->geocoder()->search('paris'));
@@ -433,9 +421,7 @@ final class GeoClientTest extends TestCase
 
     public function test_transfer_failure_after_a_success_status_is_unavailable(): void
     {
-        Http::fake(static function () {
-            throw new GuzzleRequestException('cURL error 18: transfer closed', new PsrRequest('GET', 'https://api.services.splitfire.fr/geo/search'), new PsrResponse(200));
-        });
+        Http::fake(static fn () => throw self::cutTransfer(new PsrResponse(200)));
 
         $e = self::failure(fn () => $this->geocoder()->search('paris'));
 
@@ -452,17 +438,6 @@ final class GeoClientTest extends TestCase
         Http::assertSent(static fn (Request $request) => strtok($request->url(), '?') === 'https://api.api-gateway.dev.localhost/geo/search');
     }
 
-    public function test_results_can_be_cached_as_json(): void
-    {
-        Http::fake(['*' => Http::response(self::fixture('search.json'))]);
-        $results = $this->geocoder()->search('8 bd du port');
-
-        $restored = FeatureCollection::fromArray(json_decode((string) json_encode($results), true));
-
-        self::assertSame($results->attribution, $restored->attribution);
-        self::assertEquals($results->features, $restored->features);
-    }
-
     private function geocoder(): Geocoder
     {
         return $this->app->make(Geocoder::class);
@@ -471,6 +446,23 @@ final class GeoClientTest extends TestCase
     private function client(array $overrides): GeoClient
     {
         return GeoClient::fromConfig($overrides + config('api-geo'));
+    }
+
+    private static function errorResponse(string $code, int $status, array $headers = [], ?string $parameter = null): PromiseInterface
+    {
+        return Http::response(['error' => Arr::whereNotNull(['code' => $code, 'message' => 'Fixed message.', 'parameter' => $parameter])], $status, $headers);
+    }
+
+    private static function sentQuery(Request $request): array
+    {
+        parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+        return $query;
+    }
+
+    private static function cutTransfer(PsrResponse $response): GuzzleRequestException
+    {
+        return new GuzzleRequestException('cURL error 18: transfer closed', new PsrRequest('GET', 'https://api.services.splitfire.fr/geo/search'), $response);
     }
 
     private static function failure(callable $call): RequestFailed

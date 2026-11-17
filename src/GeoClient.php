@@ -2,6 +2,7 @@
 
 namespace Splitfire\ApiGeo;
 
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
 use GuzzleHttp\Exception\TransferException;
 use Illuminate\Http\Client\ConnectionException;
@@ -51,9 +52,7 @@ final class GeoClient implements Geocoder
     public function withRequestId(?string $requestId): static
     {
         // The gateway replaces an X-Request-Id that is not 1 to 128 printable ASCII characters.
-        if ($requestId !== null && preg_match('/^[!-~]{1,128}$/D', $requestId) !== 1) {
-            $requestId = null;
-        }
+        $requestId = preg_match('/^[!-~]{1,128}$/D', (string) $requestId) === 1 ? $requestId : null;
 
         return new self(...['requestId' => $requestId] + get_object_vars($this));
     }
@@ -101,13 +100,13 @@ final class GeoClient implements Geocoder
                 ->withOptions(['timeout' => $this->timeout, 'connect_timeout' => $this->connectTimeout])
                 ->get($path, $parameters);
         } catch (ConnectionException|RequestException|TransferException $e) {
-            return self::errorResponse($e) ?? throw ServiceUnavailable::unreachable($e, $this->requestId);
+            // Depending on the Laravel version, a transfer error surfaces as a Guzzle exception or wrapped by Laravel.
+            return self::errorResponse($e) ?? throw ServiceUnavailable::unreachable(self::curlError($e), $this->requestId);
         }
     }
 
     private static function errorResponse(Throwable $e): ?Response
     {
-        // Depending on the Laravel version, a transfer error after the headers surfaces as a Guzzle exception or as a RequestException.
         $response = match (true) {
             $e instanceof RequestException => $e->response,
             $e instanceof GuzzleRequestException && $e->getResponse() !== null => new Response($e->getResponse()),
@@ -115,17 +114,27 @@ final class GeoClient implements Geocoder
         };
 
         // The status and headers of an error response still hold when its body is cut.
-        return $response !== null && $response->status() >= 400 ? $response : null;
+        return $response?->failed() ? $response : null;
+    }
+
+    private static function curlError(Throwable $e): ?string
+    {
+        // Guzzle's message ends with the full URL, searched address included; its handler context does not.
+        $transfer = $e instanceof TransferException ? $e : $e->getPrevious();
+        $context = $transfer instanceof ConnectException || $transfer instanceof GuzzleRequestException ? $transfer->getHandlerContext() : [];
+
+        return isset($context['errno'], $context['error']) ? "cURL error {$context['errno']}: {$context['error']}" : null;
     }
 
     private static function seconds(string $name, mixed $value): float
     {
         // Guzzle hands cURL whole milliseconds, where 0 means no timeout.
-        if (! is_numeric($value) || ! is_finite((float) $value) || (float) $value < 0.001) {
+        $seconds = filter_var($value, FILTER_VALIDATE_FLOAT, ['options' => ['min_range' => 0.001]]);
+        if ($seconds === false) {
             throw self::invalidConfig($name);
         }
 
-        return (float) $value;
+        return $seconds;
     }
 
     private static function count(string $name, mixed $value): int
