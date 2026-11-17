@@ -1,0 +1,50 @@
+{
+    "name": "splitfire/laravel-api-geo",
+    "description": "Laravel client for the Splitfire geocoding API (api-geo).",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.2",
+        "illuminate/http": "^8.83|^9.0|^10.0|^11.0|^12.0|^13.0",
+        "illuminate/routing": "^8.83|^9.0|^10.0|^11.0|^12.0|^13.0",
+        "illuminate/support": "^8.83|^9.0|^10.0|^11.0|^12.0|^13.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.13",
+        "nesbot/carbon": "^2.62.1|^3.0",
+        "opis/json-schema": "^2.3",
+        "orchestra/testbench": "^6.48|^7.0|^8.0|^9.0|^10.0|^11.0",
+        "phpunit/phpunit": "^9.6|^10.5|^11.5|^12.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Splitfire\\ApiGeo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Splitfire\\ApiGeo\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Splitfire\\ApiGeo\\ApiGeoServiceProvider"
+            ],
+            "aliases": {
+                "ApiGeo": "Splitfire\\ApiGeo\\Facades\\ApiGeo"
+            }
+        }
+    },
+    "scripts": {
+        "lint": "pint",
+        "lint:check": "pint --test",
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

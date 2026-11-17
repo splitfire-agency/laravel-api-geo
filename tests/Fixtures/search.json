@@ -1,0 +1,70 @@
+{
+  "type": "FeatureCollection",
+  "attribution": "Base Adresse Nationale, Licence Ouverte / Open Licence version 2.0",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [2.290084, 49.897443] },
+      "properties": {
+        "id": "ban:80021_6590_00008",
+        "type": "address",
+        "label": "8 Boulevard du Port 80000 Amiens",
+        "name": "8 Boulevard du Port",
+        "housenumber": "8",
+        "street": "Boulevard du Port",
+        "postcode": "80000",
+        "city": "Amiens",
+        "citycode": "80021",
+        "department_code": "80",
+        "department": "Somme",
+        "region_code": "32",
+        "region": "Hauts-de-France",
+        "country_code": "FR",
+        "score": 0.9573,
+        "source": "ban",
+        "importance": 0.6346
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [1.6312, 50.1873] },
+      "properties": {
+        "id": "ban:80721_0270",
+        "type": "street",
+        "label": "Rue du Port 80230 Saint-Valery-sur-Somme",
+        "name": "Rue du Port",
+        "street": "Rue du Port",
+        "postcode": "80230",
+        "city": "Saint-Valery-sur-Somme",
+        "citycode": "80721",
+        "department_code": "80",
+        "department": "Somme",
+        "region_code": "32",
+        "region": "Hauts-de-France",
+        "country_code": "FR",
+        "score": 0.6121,
+        "source": "ban"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-56.1773, 46.7811] },
+      "properties": {
+        "id": "ban:97502",
+        "type": "municipality",
+        "label": "Saint-Pierre",
+        "name": "Saint-Pierre",
+        "postcode": "97500",
+        "city": "Saint-Pierre",
+        "citycode": "97502",
+        "department_code": "975",
+        "department": "Saint-Pierre-et-Miquelon",
+        "country_code": "FR",
+        "score": 0.4102,
+        "source": "ban",
+        "population": 5394,
+        "importance": 0.4471
+      }
+    }
+  ]
+}

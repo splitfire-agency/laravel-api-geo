@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Pint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: "8.4"
+          coverage: none
+      - run: composer global require --no-interaction --no-progress "laravel/pint:^1.13"
+      - run: pint --test
+
+  tests:
+    name: Laravel ${{ matrix.laravel }}, PHP ${{ matrix.php }}${{ matrix.lowest && ', lowest' || '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # no-blocking: the latest release of these Laravel versions still has open security advisories.
+        include:
+          - { laravel: "8", testbench: "6.*", php: "8.2", no-blocking: true }
+          - { laravel: "8", testbench: "6.*", php: "8.2", no-blocking: true, lowest: true }
+          - { laravel: "9", testbench: "7.*", php: "8.2", no-blocking: true }
+          - { laravel: "10", testbench: "8.*", php: "8.2", no-blocking: true }
+          - { laravel: "11", testbench: "9.*", php: "8.2", no-blocking: true }
+          - { laravel: "12", testbench: "10.*", php: "8.2" }
+          - { laravel: "13", testbench: "11.*", php: "8.3" }
+          - { laravel: "13", testbench: "11.*", php: "8.3", no-blocking: true, lowest: true }
+          - { laravel: "13", testbench: "11.*", php: "8.4" }
+          - { laravel: "13", testbench: "11.*", php: "8.5" }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+        with:
+          dependency-versions: ${{ matrix.lowest && 'lowest' || 'highest' }}
+          composer-options: >-
+            --with orchestra/testbench:${{ matrix.testbench }}
+            ${{ matrix.no-blocking && '--no-blocking' || '' }}
+      - run: vendor/bin/phpunit

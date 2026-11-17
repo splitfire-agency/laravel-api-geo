@@ -1,0 +1,11 @@
+{
+    "preset": "laravel",
+    "rules": {
+        "@PHP82Migration": true,
+        "trailing_comma_in_multiline": {
+            "elements": ["arrays", "arguments", "parameters"]
+        },
+        "no_superfluous_phpdoc_tags": false,
+        "phpdoc_tag_type": false
+    }
+}
