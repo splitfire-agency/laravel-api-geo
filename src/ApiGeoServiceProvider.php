@@ -11,7 +11,7 @@ final class ApiGeoServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/api-geo.php', 'api-geo');
 
-        $this->app->singleton(GeoClient::class, static fn ($app) => GeoClient::fromConfig($app['config']->get('api-geo')));
+        $this->app->singleton(GeoClient::class, static fn ($app) => GeoClient::fromConfig($app['config']->get('api-geo') ?? []));
         $this->app->alias(GeoClient::class, Geocoder::class);
     }
 

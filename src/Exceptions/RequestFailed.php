@@ -14,7 +14,7 @@ abstract class RequestFailed extends RuntimeException implements ApiGeoException
         public readonly ?int $status = null,
         public readonly ?string $parameter = null,
         public readonly ResponseMeta $meta = new ResponseMeta,
-        /** Seconds, from Retry-After or, for the monthly cap, RateLimit-Reset. */
+        /** In seconds. */
         public readonly ?int $retryAfter = null,
         ?Throwable $previous = null,
     ) {

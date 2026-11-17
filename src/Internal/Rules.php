@@ -69,7 +69,7 @@ final class Rules
             return '0';
         }
 
-        // Shortest form that reads back as the same float; %H ignores the locale.
+        // Shortest form that reads back as the same float down to 1e-4, 20 fixed decimals below; %H ignores the locale.
         for ($digits = 1; $digits <= 17; $digits++) {
             $repr = sprintf('%.'.$digits.'H', $value);
             if ((float) $repr === $value) {

@@ -29,7 +29,7 @@ La clé de service est une clé `sfg_live_…` de la passerelle portant les port
 | `API_GEO_RETRY_TIMES` | `1` | nouvelles tentatives sur une indisponibilité |
 | `API_GEO_RETRY_SLEEP_MS` | `1000` | attente avant une nouvelle tentative |
 
-`php artisan vendor:publish --tag=api-geo-config` publie `config/api-geo.php`. Un fichier partiel est complété par les valeurs par défaut. Une valeur invalide (délai vide ou nul, URL vide) lève une `InvalidArgumentException` à la première résolution du client.
+`php artisan vendor:publish --tag=api-geo-config` publie `config/api-geo.php`. Un fichier partiel est complété par les valeurs par défaut. Une valeur invalide (délai vide, infini ou sous la milliseconde, URL vide) lève une `InvalidArgumentException` à la première résolution du client.
 
 ## Utilisation
 
@@ -67,7 +67,7 @@ $results->meta->rateLimit?->remaining;
 - Zéro résultat n'est pas une erreur : `$results->isEmpty()`.
 - Un résultat d'un type que cette version ne connaît pas est écarté.
 - `Feature::$id` change à chaque publication de la BAN : il ne doit pas être conservé.
-- `ApiGeo::withRequestId($id)` renvoie un client qui transmet cet identifiant.
+- `ApiGeo::withRequestId($id)` renvoie un client qui transmet cet identifiant. Un identifiant que la passerelle remplacerait (vide, plus de 128 caractères, hors ASCII imprimable) n'est pas transmis : elle en génère un.
 
 ## Erreurs
 
@@ -82,18 +82,21 @@ Les exceptions d'une requête implémentent `Splitfire\ApiGeo\Exceptions\ApiGeoE
 | `ServiceUnavailable` | passerelle, cache ou moteur indisponible, délai dépassé, connexion refusée, service désactivé |
 | `UnexpectedResponse` | réponse hors contrat |
 
-`retryAfter` reprend `Retry-After`. Pour une `QuotaExceeded`, il prend à défaut `RateLimit-Reset`, seul présent sur le plafond mensuel (fin du mois).
+`retryAfter` reprend `Retry-After`, en secondes. La passerelle ne l'envoie que sur un 429 : pour une `QuotaExceeded` sans `Retry-After`, comme le plafond mensuel (402), il prend `RateLimit-Reset`, ici la fin du mois.
 
 Une `ServiceUnavailable` est retentée `API_GEO_RETRY_TIMES` fois quand elle est passagère (`isTransient()`, faux pour `service_disabled`). Les autres erreurs ne le sont pas : un job peut relâcher une `QuotaExceeded` avec `$this->release($e->retryAfter ?? 60)`.
 
 ## Cache
 
-Le package ne met rien en cache. Chaque appel passe par la passerelle et compte dans le quota, même servi depuis le cache d'api-geo. Une `FeatureCollection` se sérialise, et `FeatureCollection::fromArray()` reconstruit sa forme JSON :
+Le package ne met rien en cache. Chaque appel passe par la passerelle et compte dans le quota, même servi depuis le cache d'api-geo. Une `FeatureCollection` se met en cache sous sa forme JSON, que `FeatureCollection::fromArray()` reconstruit :
 
 ```php
 $key = 'geo:search:'.sha1(mb_strtolower(trim($text)));
-$results = Cache::remember($key, now()->addWeek(), fn () => ApiGeo::search($text));
+$json = Cache::remember($key, now()->addWeek(), fn () => json_encode(ApiGeo::search($text)));
+$results = FeatureCollection::fromArray(json_decode($json, true));
 ```
+
+Le JSON évite de mettre en cache un objet PHP, que refuse un cache configuré avec `'serializable_classes' => false`, valeur du `config/cache.php` actuel de Laravel. `meta` est vide sur un résultat reconstruit : le quota et le request id d'origine n'ont plus cours.
 
 ## Tests dans une application
 

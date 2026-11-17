@@ -2,6 +2,7 @@
 
 namespace Splitfire\ApiGeo;
 
+use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
 use GuzzleHttp\Exception\TransferException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -51,7 +52,7 @@ final class GeoClient implements Geocoder
     {
         // The gateway replaces an X-Request-Id that is not 1 to 128 printable ASCII characters.
         if ($requestId !== null && preg_match('/^[!-~]{1,128}$/D', $requestId) !== 1) {
-            throw new InvalidArgumentException('A request id is 1 to 128 printable ASCII characters.');
+            $requestId = null;
         }
 
         return new self(...['requestId' => $requestId] + get_object_vars($this));
@@ -100,14 +101,27 @@ final class GeoClient implements Geocoder
                 ->withOptions(['timeout' => $this->timeout, 'connect_timeout' => $this->connectTimeout])
                 ->get($path, $parameters);
         } catch (ConnectionException|RequestException|TransferException $e) {
-            // Depending on the Laravel version, a transfer error surfaces as a Guzzle exception or as a RequestException.
-            throw ServiceUnavailable::unreachable($e, $this->requestId);
+            return self::errorResponse($e) ?? throw ServiceUnavailable::unreachable($e, $this->requestId);
         }
+    }
+
+    private static function errorResponse(Throwable $e): ?Response
+    {
+        // Depending on the Laravel version, a transfer error after the headers surfaces as a Guzzle exception or as a RequestException.
+        $response = match (true) {
+            $e instanceof RequestException => $e->response,
+            $e instanceof GuzzleRequestException && $e->getResponse() !== null => new Response($e->getResponse()),
+            default => null,
+        };
+
+        // The status and headers of an error response still hold when its body is cut.
+        return $response !== null && $response->status() >= 400 ? $response : null;
     }
 
     private static function seconds(string $name, mixed $value): float
     {
-        if (! is_numeric($value) || (float) $value <= 0) {
+        // Guzzle hands cURL whole milliseconds, where 0 means no timeout.
+        if (! is_numeric($value) || ! is_finite((float) $value) || (float) $value < 0.001) {
             throw self::invalidConfig($name);
         }
 

@@ -126,11 +126,13 @@ final class GeoClientTest extends TestCase
      * @dataProvider invalidRequestIds
      */
     #[DataProvider('invalidRequestIds')]
-    public function test_invalid_request_id_is_refused(string $requestId): void
+    public function test_invalid_request_id_is_not_sent(string $requestId): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        Http::fake(['*' => Http::response(self::fixture('empty.json'))]);
 
-        $this->geocoder()->withRequestId($requestId);
+        $this->geocoder()->withRequestId($requestId)->search('paris');
+
+        Http::assertSent(static fn (Request $request) => ! $request->hasHeader('X-Request-Id'));
     }
 
     public static function invalidRequestIds(): array
@@ -161,6 +163,8 @@ final class GeoClientTest extends TestCase
             'empty base url' => [['base_url' => ''], 'base_url'],
             'empty timeout' => [['timeout' => ''], 'timeout'],
             'zero timeout' => [['timeout' => 0], 'timeout'],
+            'timeout under a millisecond' => [['timeout' => 0.0005], 'timeout'],
+            'infinite timeout' => [['timeout' => '1e309'], 'timeout'],
             'negative connect timeout' => [['connect_timeout' => '-1'], 'connect_timeout'],
             'negative retries' => [['retry_times' => -1], 'retry_times'],
             'empty retry sleep' => [['retry_sleep_ms' => ''], 'retry_sleep_ms'],
@@ -379,6 +383,24 @@ final class GeoClientTest extends TestCase
         self::assertSame(2, $attempts);
     }
 
+    public function test_unreachable_message_does_not_carry_the_searched_address(): void
+    {
+        $url = 'https://api.services.splitfire.fr/geo/search?q=12%20rue%20des%20lilas';
+        Http::fake(static function () use ($url) {
+            throw new ConnectException(
+                "cURL error 7: Failed to connect to api.services.splitfire.fr port 443: Connection refused for {$url}",
+                new PsrRequest('GET', $url),
+                null,
+                ['errno' => 7, 'error' => 'Failed to connect to api.services.splitfire.fr port 443: Connection refused', 'url' => $url],
+            );
+        });
+
+        $e = self::failure(fn () => $this->geocoder()->search('12 rue des lilas'));
+
+        self::assertSame('api-geo is unreachable: cURL error 7: Failed to connect to api.services.splitfire.fr port 443: Connection refused.', $e->getMessage());
+        self::assertNull($e->getPrevious());
+    }
+
     public function test_transfer_failure_with_a_partial_response_is_unavailable(): void
     {
         Http::fake(static function () {
@@ -389,6 +411,36 @@ final class GeoClientTest extends TestCase
 
         self::assertInstanceOf(ServiceUnavailable::class, $e);
         self::assertNull($e->errorCode);
+        self::assertSame(502, $e->status);
+    }
+
+    public function test_transfer_failure_after_an_error_status_keeps_its_meaning(): void
+    {
+        $attempts = 0;
+        Http::fake(static function () use (&$attempts) {
+            $attempts++;
+
+            throw new GuzzleRequestException('cURL error 18: transfer closed', new PsrRequest('GET', 'https://api.services.splitfire.fr/geo/search'), new PsrResponse(429, ['Retry-After' => '30']));
+        });
+
+        $e = self::failure(fn () => $this->geocoder()->search('paris'));
+
+        self::assertInstanceOf(QuotaExceeded::class, $e);
+        self::assertSame(429, $e->status);
+        self::assertSame(30, $e->retryAfter);
+        self::assertSame(1, $attempts);
+    }
+
+    public function test_transfer_failure_after_a_success_status_is_unavailable(): void
+    {
+        Http::fake(static function () {
+            throw new GuzzleRequestException('cURL error 18: transfer closed', new PsrRequest('GET', 'https://api.services.splitfire.fr/geo/search'), new PsrResponse(200));
+        });
+
+        $e = self::failure(fn () => $this->geocoder()->search('paris'));
+
+        self::assertInstanceOf(ServiceUnavailable::class, $e);
+        self::assertNull($e->status);
     }
 
     public function test_base_url_is_configurable(): void
@@ -400,16 +452,15 @@ final class GeoClientTest extends TestCase
         Http::assertSent(static fn (Request $request) => strtok($request->url(), '?') === 'https://api.api-gateway.dev.localhost/geo/search');
     }
 
-    public function test_results_can_be_cached_by_the_caller(): void
+    public function test_results_can_be_cached_as_json(): void
     {
         Http::fake(['*' => Http::response(self::fixture('search.json'))]);
         $results = $this->geocoder()->search('8 bd du port');
 
-        $restored = unserialize(serialize($results));
+        $restored = FeatureCollection::fromArray(json_decode((string) json_encode($results), true));
 
-        self::assertInstanceOf(FeatureCollection::class, $restored);
-        self::assertEquals($results, $restored);
-        self::assertEquals($results->features, FeatureCollection::fromArray(json_decode(json_encode($results), true))->features);
+        self::assertSame($results->attribution, $restored->attribution);
+        self::assertEquals($results->features, $restored->features);
     }
 
     private function geocoder(): Geocoder

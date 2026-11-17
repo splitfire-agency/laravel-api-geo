@@ -63,7 +63,7 @@ final class ResponseReader
             $status,
             is_string($error['parameter'] ?? null) ? $error['parameter'] : null,
             $meta,
-            // The monthly cap (402) only sends RateLimit-Reset.
+            // The gateway sends Retry-After on a 429 only; on a 402, RateLimit-Reset describes the limit that refused.
             self::integer($response, 'Retry-After') ?? ($class === QuotaExceeded::class ? $meta->rateLimit?->reset : null),
         );
     }

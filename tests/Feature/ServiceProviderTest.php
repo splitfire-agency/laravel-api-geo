@@ -3,6 +3,7 @@
 namespace Splitfire\ApiGeo\Tests\Feature;
 
 use Illuminate\Support\Facades\Http;
+use InvalidArgumentException;
 use Splitfire\ApiGeo\ApiGeoServiceProvider;
 use Splitfire\ApiGeo\Contracts\Geocoder;
 use Splitfire\ApiGeo\Facades\ApiGeo;
@@ -35,6 +36,15 @@ final class ServiceProviderTest extends TestCase
         self::assertSame(3, config('api-geo.retry_times'));
         self::assertSame(1000, config('api-geo.retry_sleep_ms'));
         self::assertSame('https://api.services.splitfire.fr/geo', config('api-geo.base_url'));
+    }
+
+    public function test_configuration_missing_from_a_stale_cache_is_reported_as_invalid(): void
+    {
+        $this->app['config']->set('api-geo', null);
+
+        $this->expectExceptionObject(new InvalidArgumentException('Invalid api-geo configuration value: base_url.'));
+
+        $this->app->make(Geocoder::class);
     }
 
     public function test_applications_can_substitute_the_geocoder(): void
