@@ -4,6 +4,7 @@ namespace Splitfire\ApiGeo\Tests\Feature;
 
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
+use GuzzleHttp\Exception\ResponseTransferException;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Request as PsrRequest;
 use GuzzleHttp\Psr7\Response as PsrResponse;
@@ -389,10 +390,8 @@ final class GeoClientTest extends TestCase
         $url = 'https://api.services.splitfire.fr/geo/search?q=12%20rue%20des%20lilas';
         Http::fake(static function () use ($url) {
             throw new ConnectException(
-                "cURL error 7: Failed to connect to api.services.splitfire.fr port 443: Connection refused for {$url}",
+                "cURL error 7: Failed to connect to api.services.splitfire.fr port 443: Connection refused (see https://curl.se/libcurl/c/libcurl-errors.html) for {$url}",
                 new PsrRequest('GET', $url),
-                null,
-                ['errno' => 7, 'error' => 'Failed to connect to api.services.splitfire.fr port 443: Connection refused', 'url' => $url],
             );
         });
 
@@ -462,7 +461,11 @@ final class GeoClientTest extends TestCase
 
     private static function cutTransfer(PsrResponse $response): GuzzleRequestException
     {
-        return new GuzzleRequestException('cURL error 18: transfer closed', new PsrRequest('GET', 'https://api.services.splitfire.fr/geo/search'), $response);
+        $request = new PsrRequest('GET', 'https://api.services.splitfire.fr/geo/search');
+
+        return class_exists(ResponseTransferException::class)
+            ? new ResponseTransferException('cURL error 18: transfer closed', $request, $response)
+            : new GuzzleRequestException('cURL error 18: transfer closed', $request, $response);
     }
 
     private static function failure(callable $call): RequestFailed

@@ -2,7 +2,6 @@
 
 namespace Splitfire\ApiGeo;
 
-use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
 use GuzzleHttp\Exception\TransferException;
 use Illuminate\Http\Client\ConnectionException;
@@ -119,11 +118,8 @@ final class GeoClient implements Geocoder
 
     private static function curlError(Throwable $e): ?string
     {
-        // Guzzle's message ends with the full URL, searched address included; its handler context does not.
-        $transfer = $e instanceof TransferException ? $e : $e->getPrevious();
-        $context = $transfer instanceof ConnectException || $transfer instanceof GuzzleRequestException ? $transfer->getHandlerContext() : [];
-
-        return isset($context['errno'], $context['error']) ? "cURL error {$context['errno']}: {$context['error']}" : null;
+        // Guzzle 7 and 8 write "cURL error N: <reason> (see <doc>) for <URL>"; the URL carries the searched address.
+        return preg_match('/^(cURL error \d+: .*?) \(see https?:\/\//', $e->getMessage(), $match) === 1 ? $match[1] : null;
     }
 
     private static function seconds(string $name, mixed $value): float
