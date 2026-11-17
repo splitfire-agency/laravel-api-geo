@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/splitfire-agency/api-geo/contracts/geo-v1.schema.json",
+  "title": "geo v1 response",
+  "oneOf": [
+    { "$ref": "#/$defs/featureCollection" },
+    { "$ref": "#/$defs/error" }
+  ],
+  "$defs": {
+    "featureCollection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "attribution", "features"],
+      "properties": {
+        "type": { "const": "FeatureCollection" },
+        "attribution": { "type": "string", "minLength": 1 },
+        "features": { "type": "array", "items": { "$ref": "#/$defs/feature" } }
+      }
+    },
+    "feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "geometry", "properties"],
+      "properties": {
+        "type": { "const": "Feature" },
+        "geometry": { "$ref": "#/$defs/point" },
+        "properties": { "$ref": "#/$defs/properties" }
+      }
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "coordinates"],
+      "properties": {
+        "type": { "const": "Point" },
+        "coordinates": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "number", "minimum": -180, "maximum": 180 },
+            { "type": "number", "minimum": -90, "maximum": 90 }
+          ],
+          "items": false,
+          "minItems": 2
+        }
+      }
+    },
+    "properties": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "label", "name", "postcode", "city", "country_code", "score", "source"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^ban:.+$" },
+        "type": { "enum": ["address", "street", "locality", "municipality"] },
+        "label": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "housenumber": { "type": "string", "minLength": 1 },
+        "street": { "type": "string", "minLength": 1 },
+        "postcode": { "type": "string", "pattern": "^[0-9]{5}$" },
+        "city": { "type": "string", "minLength": 1 },
+        "citycode": { "type": "string", "pattern": "^([0-9]{5}|2[AB][0-9]{3})$" },
+        "department_code": { "type": "string", "pattern": "^(0[1-9]|1[0-9]|2[1-9AB]|[3-8][0-9]|9[0-5]|97[1-8])$" },
+        "department": { "type": "string", "minLength": 1 },
+        "region_code": { "enum": ["01", "02", "03", "04", "06", "11", "24", "27", "28", "32", "44", "52", "53", "75", "76", "84", "93", "94"] },
+        "region": { "type": "string", "minLength": 1 },
+        "country_code": { "const": "FR" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "distance": { "type": "number", "minimum": 0 },
+        "source": { "const": "ban" },
+        "population": { "type": "integer", "minimum": 0 },
+        "importance": { "type": "number", "minimum": 0 }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "enum": ["route_not_found", "missing_parameter", "invalid_parameter", "query_too_short", "engine_unavailable", "internal_error", "service_unavailable", "forbidden"]
+            },
+            "message": { "type": "string", "minLength": 1 },
+            "parameter": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

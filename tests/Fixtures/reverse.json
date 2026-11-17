@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "attribution": "Base Adresse Nationale, Licence Ouverte / Open Licence version 2.0",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [2.290084, 49.897443] },
+      "properties": {
+        "id": "ban:80021_6590_00008",
+        "type": "address",
+        "label": "8 Boulevard du Port 80000 Amiens",
+        "name": "8 Boulevard du Port",
+        "housenumber": "8",
+        "street": "Boulevard du Port",
+        "postcode": "80000",
+        "city": "Amiens",
+        "citycode": "80021",
+        "department_code": "80",
+        "department": "Somme",
+        "region_code": "32",
+        "region": "Hauts-de-France",
+        "country_code": "FR",
+        "score": 0.9998,
+        "distance": 6.2,
+        "source": "ban"
+      }
+    }
+  ]
+}
