@@ -2,7 +2,7 @@
     "name": "splitfire/laravel-api-geo",
     "description": "Laravel client for the Splitfire geocoding API (api-geo).",
     "type": "library",
-    "license": "proprietary",
+    "license": "MIT",
     "require": {
         "php": "^8.2",
         "guzzlehttp/guzzle": "^7.2|^8.0",

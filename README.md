@@ -1,18 +1,10 @@
 # laravel-api-geo
 
-Client Laravel de l'API de géocodage Splitfire ([api-geo](https://github.com/splitfire-agency/api-geo)), joignable à travers la passerelle [api-gateway](https://github.com/splitfire-agency/api-gateway) sous `/geo`. Le contrat de réponse de référence est [`docs/contract.md`](https://github.com/splitfire-agency/api-geo/blob/main/docs/contract.md) d'api-geo.
+Client Laravel de l'API de géocodage Splitfire (api-geo), joignable à travers la passerelle api-gateway sous `/geo`. Le contrat de réponse de référence est `docs/contract.md` d'api-geo.
 
 Compatible Laravel 8.83 à 13, PHP 8.2 et plus.
 
 ## Installation
-
-Le dépôt est privé :
-
-```json
-"repositories": [
-    { "type": "vcs", "url": "git@github.com:splitfire-agency/laravel-api-geo.git" }
-]
-```
 
 ```bash
 composer require splitfire/laravel-api-geo
