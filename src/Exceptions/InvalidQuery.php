@@ -21,6 +21,6 @@ final class InvalidQuery extends InvalidArgumentException implements ApiGeoExcep
 
     public static function tooShort(): self
     {
-        return new self('query_too_short', 'q', 'The query must contain at least 3 characters.');
+        return new self('query_too_short', 'q', 'The query must contain at least 2 characters.');
     }
 }

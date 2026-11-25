@@ -20,7 +20,7 @@ final class SearchQueryTest extends TestCase
      * @dataProvider tooShortTexts
      */
     #[DataProvider('tooShortTexts')]
-    public function test_text_shorter_than_three_characters_is_too_short(string $text): void
+    public function test_text_shorter_than_two_characters_is_too_short(string $text): void
     {
         $e = self::invalid(static fn () => SearchQuery::for($text));
 
@@ -30,12 +30,13 @@ final class SearchQueryTest extends TestCase
 
     public static function tooShortTexts(): array
     {
-        return ['empty' => [''], 'spaces' => ['   '], 'two characters' => ['ab'], 'padded' => ['  ab  '], 'two accented' => ['éé']];
+        return ['empty' => [''], 'spaces' => ['   '], 'one character' => ['a'], 'padded' => ['  a  '], 'one accented' => ['é']];
     }
 
     public function test_text_length_counts_characters_not_bytes(): void
     {
-        self::assertSame('été', SearchQuery::for('été')->text);
+        self::assertSame('éé', SearchQuery::for('éé')->text);
+        self::assertSame('Eu', SearchQuery::for('  Eu  ')->text);
         self::assertSame(200, mb_strlen(SearchQuery::for(str_repeat('é', 200))->text));
         self::assertSame('invalid_parameter', self::invalid(static fn () => SearchQuery::for(str_repeat('é', 201)))->errorCode);
     }
