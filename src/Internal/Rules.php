@@ -30,7 +30,7 @@ final class Rules
 
         $text = (string) preg_replace('/^\s+|\s+$/Du', '', $raw);
         $length = mb_strlen($text, 'UTF-8');
-        if ($length < 3) {
+        if ($length < 2) {
             throw InvalidQuery::tooShort();
         }
         if ($length > 200) {

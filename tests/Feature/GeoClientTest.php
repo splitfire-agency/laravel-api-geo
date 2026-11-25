@@ -94,7 +94,7 @@ final class GeoClientTest extends TestCase
         $this->expectException(InvalidQuery::class);
 
         try {
-            $this->geocoder()->search('ab');
+            $this->geocoder()->search('a');
         } finally {
             Http::assertNothingSent();
         }
